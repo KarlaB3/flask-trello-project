@@ -3,6 +3,7 @@ from flask import Blueprint
 from main import bcrypt
 from models.cards import Card
 from models.users import User
+from models.comments import Comment
 from datetime import date
 
 db_commands = Blueprint("db", __name__)
@@ -14,13 +15,31 @@ def create_db():
 
 @db_commands.cli.command("seed")
 def seed_db():
+    #Create the users first
+    admin_user = User(
+        email = "admin@email.com",
+        password = bcrypt.generate_password_hash("password123").decode("utf-8"),
+        admin = True
+    )
+
+    db.session.add(admin_user)
+
+    user1 = User(
+        email = "user1@email.com",
+        password = bcrypt.generate_password_hash("123456").decode("utf-8")
+    )
+    db.session.add(user1)
+    #This extra commit will end the transaction and generate the ids for the user
+    db.session.commit()
+
     card1 = Card(
         # set the attributes, not the id, SQLAlchemy will manage that for us
         title = "Start the project",
         description = "Stage 1, creating the database",
         status = "To Do",
         priority = "High",
-        date = date.today()
+        date = date.today(),
+        user_id = user1.id 
     )
     # Add the object as a new row to the table
     db.session.add(card1)
@@ -31,25 +50,40 @@ def seed_db():
         description = "Stage 2, integrate both modules in the project",
         status = "Ongoing",
         priority = "High",
-        date = date.today()
+        date = date.today(),
+        user_id = user1.id
     )
     # Add the object as a new row to the table
     db.session.add(card2)
 
-    admin_user = User(
-        email = "admin@email.com",
-        password = bcrypt.generate_password_hash("password123").decode("utf-8"),
-        admin = True
-    )
-    db.session.add(admin_user)
-
-    user1 = User(
-        email = "user1@email.com",
-        password = bcrypt.generate_password_hash("123456").decode("utf-8")
-    )
-    db.session.add(user1)
-    # commit the changes
     db.session.commit()
+
+    comment1 = Comment(
+        message = "Created the database and users in PostgreSQL",
+        user = user1,
+        card = card1
+)
+
+    db.session.add(comment1)
+
+    comment2 = Comment(
+        message = "Make sure you check the database authentication",
+        user = admin_user,
+        card = card1
+    )
+
+    db.session.add(comment2)
+
+    comment3 = Comment(
+        message = "Go to the official documentation when errors",
+        user = user1,
+        card = card2
+    )
+
+    db.session.add(comment3)
+
+    db.session.commit()
+
     print("Table seeded") 
 
 @db_commands.cli.command("drop")
